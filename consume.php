@@ -131,14 +131,42 @@ class Recipe {
          $curlHandler = $ingredient->getCurlHandler();
       }
     }
+    $this->clean($this->variables, true);
   }
   
   public function getVariables() {
     return $this->variables;
   }
   
+  private function clean($variables, $final = false) {
+    foreach ($variables as $name => $data) {
+      //Remove #value attributes if there are no #display attribute recursively
+      if (!is_array($data)) {
+        continue;
+      }
+      if (!array_key_exists('#display', $data)) {
+        if (array_key_exists('#value', $data)) {
+          if (count($data) > 1) {
+            unset($variables[$name]['#value']);
+          }
+          else {
+            unset($variables[$name]);
+            continue;
+          }
+        }
+      }
+      $variables[$name] = $this->clean($variables[$name]);
+    }
+    if ($final) {
+      $this->variables = $variables;
+    }
+    else {
+      return $variables;
+    }
+  }
+  
   public function setVariable($name, $value) {
-     $this->variables[$name] = $value;
+     $this->variables[$name] = array('#value' => $value);
   }
 }
 
@@ -158,23 +186,6 @@ class Ingredient {
   protected $variables = array();
   protected $postFields = '';
   protected $curlHandler = null;
-  
-  /*
-  function __construct($url, $referrer, $curlOptions, $requestType, $variables, $postFields = '') {
-    $this->curlOptions = $curlOptions;
-    $this->variables = $variables;
-    
-    
-    $this->curlOptions[CURLOPT_URL] = $url;
-    if ($requestType == CONSUME_INGREDIENT_TYPE_POST) {
-      $this->curlOptions[CURLOPT_POST] = true;
-      if ($postFields != null) {
-        $this->curlOptions[CURLOPT_POSTFIELDS] = $postFields;
-        $this->postFields = $postFields;
-      }
-    }    
-  }
-  */
   
   function __construct($IngredientXML) {
     //set ingredient variables
@@ -244,9 +255,9 @@ class Ingredient {
     }
     
     if (count($variables) > 0) {
-      foreach($variables as $postFieldVariableName => $postFieldVariableValue) {
-        $this->postFields = str_replace('@'.$postFieldVariableName, $postFieldVariableValue, $this->postFields);
-        $curlOptions[CURLOPT_URL] = str_replace('@'.$postFieldVariableName, $postFieldVariableValue, $curlOptions[CURLOPT_URL]);
+      foreach($variables as $postFieldVariableName => $postFieldVariable) {
+        $this->postFields = str_replace('@'.$postFieldVariableName, $postFieldVariable['#value'], $this->postFields);
+        $curlOptions[CURLOPT_URL] = str_replace('@'.$postFieldVariableName, $postFieldVariable['#value'], $curlOptions[CURLOPT_URL]);
       }
       $curlOptions[CURLOPT_POSTFIELDS] = $this->postFields;
     }
@@ -282,10 +293,10 @@ class Variable {
   protected $value = null;
   protected $pattern = '';
   protected $variables = array();
+  protected $display = array();
 
   
   function __construct($VariableXML) {
-    //print '<pre>'.htmlentities(var_export($VariableXML, true)).'</pre>';
     
     $this->name = (string) $VariableXML->name;
     $this->pattern = html_entity_decode((string) $VariableXML->pattern);
@@ -306,6 +317,10 @@ class Variable {
       foreach ($VariableXML->variables->variable as $variable) {
         $this->variables[] = new Variable($variable);
       }
+    }
+    
+    if ($VariableXML->display){
+      $this->display = (array)$VariableXML->display;
     }
   }
   
@@ -338,7 +353,12 @@ class Variable {
   
   public function process($string) {
     $parsed_value = $this->parse($string);
-    $value = array($this->name => $parsed_value);
+    $attributes = array('#value' => $parsed_value);
+    
+    if (count($this->display) > 0) {
+      $attributes['#display'] = $this->display;
+    }
+    $value = array($this->name => $attributes);
     
     //recursively process each child-variable
     //This may need work too
@@ -347,7 +367,8 @@ class Variable {
       foreach ($this->variables as $variable) {
         $values = array_merge($values, $variable->process($parsed_value));
       }
-      $value = array_merge($value, $values);
+      
+      $value[$this->name] = array_merge($value[$this->name], $values);
     }
     return $value;
   }
