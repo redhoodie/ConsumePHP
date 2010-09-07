@@ -1,0 +1,53 @@
+<?xml version='1.0' standalone='yes'?>
+<recipes>
+  <recipe>
+    <name>Snapper</name>
+    <version>0.1</version>
+    <keepCurlAlive>1</keepCurlAlive>
+    <ingredients>
+      <ingredient>
+        <url>https://www.snapper.co.nz/home/LoginForm</url>
+        <referrer>https://www.snapper.co.nz/</referrer>
+        <requestType>1</requestType>
+        <postFields>Email=@email&amp;Password=@password&amp;action_dologin=Log in&amp;AuthenticationMethod=MemberAuthenticator</postFields>
+        <variables>
+          <variable>
+            <name>card</name>
+            <pattern>|&lt;li class=&quot;cardshow[0-9]* &quot;&gt;(.*)&lt;/li&gt;|msU</pattern>
+            <variables>
+              <variable>
+                <name>name</name>
+                <pattern>|&lt;h2&gt;(.*)&lt;/h2&gt;|msU</pattern>
+                <display>
+                  <label>Name</label>
+                  <type>tablecell</type>
+                </display>
+              </variable>
+              <variable>
+                <name>amount</name>
+                <pattern>|&lt;h3 class=&quot;amount&quot;&gt;(.*)&lt;/h3&gt;|msU</pattern>
+                <assertions>
+                  <assertion>|\$\d*\.\d*|s</assertion>                
+                </assertions>
+                <transformations>
+                  <transformation>
+                    <search>|\$|</search>
+                    <replace>NZ$</replace>
+                  </transformation>                
+                </transformations>
+                <display>
+                  <label>Value</label>
+                  <type>tablecell</type>
+                </display>
+              </variable>
+            </variables>
+          </variable>
+        </variables>
+      </ingredient>
+      <ingredient>
+        <url>https://www.snapper.co.nz/Security/logout/</url>
+        <referrer>1</referrer>
+      </ingredient>
+    </ingredients>
+  </recipe>
+</recipes>
