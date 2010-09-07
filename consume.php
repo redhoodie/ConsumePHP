@@ -107,8 +107,6 @@ class Recipe {
   protected $variables = array();
 
   function __construct($recipeXML){
-    //print '<pre>'.htmlentities(var_export($recipeXML, true)).'</pre>';
-    
     //set recipe variables
     $this->name = (string) $recipeXML->name;
     $this->version = (string) $recipeXML->version;
@@ -138,6 +136,16 @@ class Recipe {
     return $this->variables;
   }
   
+  public function dressVariables(){
+    $content = '';
+    foreach ($this->variables as $name => $data) {
+      if (array_key_exists('#display', $data)) {
+        
+      }
+    }
+    return $content;
+  }
+  
   private function clean($variables, $final = false) {
     foreach ($variables as $name => $data) {
       //Remove #value attributes if there are no #display attribute recursively
@@ -153,6 +161,11 @@ class Recipe {
             unset($variables[$name]);
             continue;
           }
+        }
+      }
+      if (array_key_exists('#display', $data)) {
+        if (array_key_exists('hidden', $data['#display'])) {
+          unset($variables[$name]['#value']);
         }
       }
       $variables[$name] = $this->clean($variables[$name]);
