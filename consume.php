@@ -136,13 +136,52 @@ class Recipe {
     return $this->variables;
   }
   
-  public function dressVariables(){
-    $content = '';
+  //Genetates a marked up version of retrieved variables
+  public function draw() {
     foreach ($this->variables as $name => $data) {
-      if (array_key_exists('#display', $data)) {
-        
+      if (array_key_exists('#display', $data) && array_key_exists('type', $data['#display'])) {
+        switch ($data['#display']['type']) {
+          case 'table':
+             $content .= Recipe::dressTable($data);
+            break;
+        }
       }
     }
+    return $content;
+  }
+  
+  //Renders a table from parsed variable data
+  private static function dressTable($data) {
+    if ($data['#display']['label']) {
+      $caption = '<caption>'.$data['#display']['label'].'</caption>';
+    }
+    $content .= <<<EOH
+<table>
+  $caption
+  <thead>
+    <tr>
+EOH;
+    foreach ($data as $name => $variable) {
+      if (is_array($variable) && substr($name, 0, 1) != '#' && $variable['#display']['type'] == 'tablecell') {
+        $content .= '<th>'.$variable['#display']['label'].'</th>'."\n    ";
+      }
+    }
+$content .= <<<EOH
+</tr>
+  </thead>
+  <tbody>
+    <tr>
+EOH;
+    foreach ($data as $name => $variable) {
+      if (is_array($variable) && substr($name, 0, 1) != '#' && $variable['#display']['type'] == 'tablecell') {
+        $content .= '<td>'.$variable['#value'].'</td>'."\n    ";
+      }
+    }
+$content .= <<<EOH
+</tr>
+  </tbody>
+</table>
+EOH;
     return $content;
   }
   
@@ -180,6 +219,10 @@ class Recipe {
   
   public function setVariable($name, $value) {
      $this->variables[$name] = array('#value' => $value);
+  }
+  
+  public function getName() {
+    return $this->name;
   }
 }
 
