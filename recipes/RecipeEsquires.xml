@@ -1,0 +1,58 @@
+<?xml version='1.0' standalone='yes'?>
+<recipes>
+  <recipe>
+    <name>Esquires</name>
+    <version>0.1</version>
+    <keepCurlAlive>1</keepCurlAlive>
+    <requires>
+      <variable>
+        <name>cardnumber</name>
+        <type>text</type>
+      </variable>
+      <variable>
+        <name>password</name>
+        <type>password</type>
+      </variable>
+    </requires>
+    <ingredients>
+      <ingredient>
+        <url>http://transactortech.co.nz/Esquires-Customer/servlet/DemoLoginServlet</url>
+        <referrer>http://transactortech.co.nz/Esquires-Customer/Login.html</referrer>
+        <requestType>1</requestType>
+        <postFields>userID=@cardnumber&amp;password=@password&amp;preAll=1&amp;transIdentType=1&amp;programID=11&amp;Submit&amp;form1</postFields>
+      </ingredient>
+      <ingredient>
+        <url>http://transactortech.co.nz/Esquires-Customer/JSP/DemoSummary.jsp</url>
+        <referrer>http://transactortech.co.nz/Esquires-Customer/servlet/DemoLoginServlet</referrer>
+        <requestType>0</requestType>
+        <debug />
+        <variables>
+          <variable>
+            <name>giftbalance</name>
+            <pattern>|&lt;td&gt;Gift Balance.*?&lt;b&gt;.*?\$(.*?).*?&lt;/b&gt;|msU</pattern>
+            <label>Gift Balance</label>
+          </variable>
+          <variable>
+            <name>rewardbalance</name>
+            <pattern>|&lt;td&gt;Reward Balance.*?&lt;b&gt;.*?\$(.*?).*?&lt;/b&gt;|msU</pattern>
+            <assertions>
+              <assertion>|\d*\.\d*|s</assertion>                
+            </assertions>
+            <transformations>
+              <transformation>
+                <search>|\$|</search>
+                <replace>NZ$</replace>
+              </transformation>                
+            </transformations>
+            <label>Reward Balance</label>
+          </variable>
+        </variables>
+      </ingredient>
+	  
+      <ingredient>
+        <url>http://transactortech.co.nz/Esquires-Customer/servlet/DemoLogoutServlet</url>
+        <referrer>1</referrer>
+      </ingredient>
+    </ingredients>
+  </recipe>
+</recipes>

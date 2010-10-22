@@ -3,7 +3,18 @@
   <recipe>
     <name>Snapper</name>
     <version>0.1</version>
+    <stylesheet>RecipeSnapper.xsl</stylesheet>
     <keepCurlAlive>1</keepCurlAlive>
+    <requires>
+      <variable>
+        <name>email</name>
+        <type>text</type>
+      </variable>
+      <variable>
+        <name>password</name>
+        <type>password</type>
+      </variable>
+    </requires>
     <ingredients>
       <ingredient>
         <url>https://www.snapper.co.nz/home/LoginForm</url>
@@ -14,14 +25,13 @@
           <variable>
             <name>card</name>
             <pattern>|&lt;li class=&quot;cardshow[0-9]* &quot;&gt;(.*)&lt;/li&gt;|msU</pattern>
+            <label>Card</label>
+            <hidden />
             <variables>
               <variable>
                 <name>name</name>
                 <pattern>|&lt;h2&gt;(.*)&lt;/h2&gt;|msU</pattern>
-                <display>
-                  <label>Name</label>
-                  <type>tablecell</type>
-                </display>
+                <label>Name</label>
               </variable>
               <variable>
                 <name>amount</name>
@@ -35,10 +45,7 @@
                     <replace>NZ$</replace>
                   </transformation>                
                 </transformations>
-                <display>
-                  <label>Value</label>
-                  <type>tablecell</type>
-                </display>
+                <label>Value</label>
               </variable>
             </variables>
           </variable>

@@ -1,0 +1,179 @@
+<?xml version='1.0' standalone='yes'?>
+<recipes>
+  <recipe>
+    <name>ANZ</name>
+    <version>0.1</version>
+    <keepCurlAlive>1</keepCurlAlive>
+    <requires>
+      <variable>
+        <name>customerRegistrationNumber</name>
+        <type>number</type>
+      </variable>
+      <variable>
+        <name>password</name>
+        <type>password</type>
+      </variable>
+    </requires>
+    <ingredients>
+      <ingredient>
+        <url>https://www.anz.com/nz/inetbank/login.asp?BOX=</url>
+        <referrer></referrer>
+        <requestType>0</requestType>
+        <variables>
+          <variable>
+            <name>loginFormAction</name>
+            <pattern>|name="loginForm" method="POST" action="(.*?)"|i</pattern>
+            <hidden/>
+          </variable>
+          <variable>
+            <name>EWF_SYS_0</name>
+            <pattern>|name="EWF_SYS_0" value="(.*?)"|i</pattern>
+            <hidden/>
+          </variable>
+          <variable>
+            <name>EWF_FORM_NAME</name>
+            <pattern>|name="EWF_FORM_NAME" value="(.*?)"|i</pattern>
+            <hidden/>
+          </variable>
+          <variable>
+            <name>BANK_ID</name>
+            <pattern>|name="BANK ID" value="(.*?)"|i</pattern>
+            <hidden/>
+          </variable>
+          <variable>
+            <name>GROUP</name>
+            <pattern>|name="GROUP" value="(.*?)"|i</pattern>
+            <hidden/>
+          </variable>
+          <variable>
+            <name>PRODUCT_NAME</name>
+            <pattern>|name="PRODUCT NAME" value="(.*?)"|i</pattern>
+            <hidden/>
+          </variable>
+          <variable>
+            <name>LANGUAGE_ID</name>
+            <pattern>|name="LANGUAGE ID" value="(.*?)"|i</pattern>
+            <hidden/>
+          </variable>
+          <variable>
+            <name>LAST_HOST_RESPONSE</name>
+            <pattern>|name="LAST HOST RESPONSE" value="(.*?)"|i</pattern>
+            <hidden/>
+          </variable>
+          <variable>
+            <name>ServiceResolverURL</name>
+            <pattern>|name="ServiceResolverURL" value="(.*?)"|i</pattern>
+            <hidden/>
+          </variable>
+          <variable>
+            <name>DefaultFormAction</name>
+            <pattern>|name="DefaultFormAction" value="(.*?)"|i</pattern>
+            <hidden/>
+          </variable>
+          <variable>
+            <name>HiddenFrameTimeout</name>
+            <pattern>|name="HiddenFrameTimeout" value="(.*?)"|i</pattern>
+            <hidden/>
+          </variable>
+          <variable>
+            <name>ANZ_FINACLE_GUID</name>
+            <pattern>|id="ANZ_FINACLE_GUID" value="(.*?)"|i</pattern>
+            <hidden/>
+          </variable>
+        </variables>
+      </ingredient>
+      <ingredient>
+        <url>@loginFormAction</url>
+        <referrer>1</referrer>
+        <requestType>1</requestType>
+        <postFields>EWF_SYS_0=@EWF_SYS_0&amp;EWF_FORM_NAME=@EWF_FORM_NAME&amp;BANK+ID=@BANK_ID&amp;GROUP=@GROUP&amp;PRODUCT+NAME=@PRODUCT_NAME&amp;LANGUAGE+ID=@LANGUAGE_ID&amp;EWF_BUTTON_Modify=Modify&amp;LAST+HOST+RESPONSE=@LAST_HOST_RESPONSE&amp;USERID=@customerRegistrationNumber&amp;PIN=@password&amp;EXTRA2=@EXTRA2&amp;ServiceResolverURL=@ServiceResolverURL&amp;DefaultFormAction=@DefaultFormAction&amp;HiddenFrameTimeout=@HiddenFrameTimeout&amp;SRRUNNING=&amp;ANZ_FINACLE_GUID=@ANZ_FINACLE_GUID&amp;CorporateSignonCorpId=@customerRegistrationNumber&amp;CorporateSignonPassword=@password</postFields>
+        <variables>
+          <variable>
+            <name>securityFormAction</name>
+            <pattern>|&lt;FORM ACTION="(.*?)" METHOD="POST" NAME="securityForm"|i</pattern>
+            <hidden/>
+          </variable>
+        </variables>
+      </ingredient>
+      <ingredient>
+        <url>https://banking2.anz.com/IBNZ/@securityFormAction</url>
+        <referrer>1</referrer>
+        <tidy/>
+        <requestType>1</requestType>
+        <postFields>Action.RetUser.SignonOK.x=69&amp;Action.RetUser.SignonOK.y=14&amp;Action.RetUser.SignonOK=Proceed+to+Internet+Banking</postFields>
+        <variables>
+          <variable>
+            <name>headerFormAction</name>
+            <pattern>|&lt;form action="(.*?)" method="POST" name="headerFrm"|i</pattern>
+            <hidden/>
+          </variable>
+          <variable>
+            <name>serverDateTime</name>
+            <pattern>|id="serverDateTime" value="(.*?)"|i</pattern>
+            <hidden/>
+          </variable>
+          <variable>
+            <name>AFF_IB_TXT</name>
+            <pattern>|name="AFF_IB_TXT" value="(.*?)"|i</pattern>
+            <hidden/>
+          </variable>
+          <variable>
+            <name>account</name>
+            <pattern>|&gt;([a-zA-Z ]+account&lt;/a&gt;.*?&lt;/td&gt;\n&lt;/tr)|ims</pattern>
+            <hidden/>
+            <transformations>
+              <transformation>
+                <search>|nbsp;|</search>
+                <replace></replace>
+              </transformation>
+              <transformation>
+                <search>|&amp;|</search>
+                <replace></replace>
+              </transformation>
+            </transformations> 
+            <variables>
+              <variable>
+                <name>accountName</name>
+                <label>Account Name</label>
+                <pattern>|(.*?)&lt;/a&gt;|i</pattern>
+              </variable>
+              <variable>
+                <name>accountNumber</name>
+                <label>Account Number</label>
+                <pattern>|&lt;td class="dataCol colLeft"&gt;(.*?)&lt;/td&gt;|i</pattern>
+              </variable>
+              <variable>
+                <name>accountBalance</name>
+                <label>Account Balance</label>
+                <pattern>|[0-9]&lt;/td&gt;\n&lt;td class="dataCol colRight"&gt;(\$.*?)&lt;/td&gt;\n&lt;|ims</pattern>
+                <transformations>
+                  <transformation>
+                    <search>|(.*?)-|</search>
+                    <replace>-\1</replace>
+                  </transformation>                  
+                </transformations>
+              </variable>
+              <variable>
+                <name>availableFunds</name>
+                <label>Available Funds</label>
+                <pattern>|&lt;td class="dataCol colRight"&gt;(\$[0-9]+\.[0-9]+)&lt;/td&gt;\n&lt;/tr|ims</pattern>
+                <transformations>
+                  <transformation>
+                    <search>|(.*?)-|</search>
+                    <replace>-\1</replace>
+                  </transformation>                  
+                </transformations>
+              </variable>
+            </variables>
+          </variable>
+        </variables>
+      </ingredient>
+      <ingredient>
+        <url>https://banking2.anz.com/IBNZ/@headerFormAction</url>
+        <referrer>1</referrer>
+        <requestType>1</requestType>
+        <postFields>Action.CorpUser.001.SignoffConfirm.x=69&amp;Action.CorpUser.001.SignoffConfirm.y=14&amp;Action.CorpUser.001.SignoffConfirm=log+out</postFields>
+      </ingredient>
+    </ingredients>
+  </recipe>
+</recipes>

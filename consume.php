@@ -105,6 +105,7 @@ class Recipe {
   protected $ingredients = array();
   protected $curlKeepAlive = false;
   protected $variables = array();
+  protected $requires = array();
 
   function __construct($recipeXML){
     //set recipe variables
@@ -116,6 +117,19 @@ class Recipe {
     foreach ($recipeXML->ingredients->ingredient as $ingredient) {
       $this->ingredients[] = new Ingredient($ingredient);
     }
+    
+    if (count((array) $recipeXML->requires) > 0) {
+      $requires = (array) $recipeXML->requires;
+      foreach ($requires as $type => $array) {
+        foreach ($array as $item) {
+          $item = (array) $item;
+          if (!is_array($this->requires[$type])) {
+            $this->requires[$type] = array();
+          }
+          $this->requires[$type][] = $item;
+        }
+      }
+    }    
   }
   
   public function bake() {
@@ -137,61 +151,77 @@ class Recipe {
   }
   
   //Genetates a marked up version of retrieved variables
-  public function draw() {
-    foreach ($this->variables as $name => $data) {
-      if (array_key_exists('#display', $data) && array_key_exists('type', $data['#display'])) {
-        switch ($data['#display']['type']) {
-          case 'table':
-             $content .= Recipe::dressTable($data);
-            break;
+  public function getResult() {
+    $recipe = (array)$this;
+    foreach($recipe as $key => $value) {
+      $newkey = trim(str_replace('*', '', $key));
+      $recipe[$newkey] = $value;
+      unset($recipe[$key]);
+    }
+    
+    //needs cleaning up
+    $new_variables = array();
+    $i = 0;
+    foreach($recipe['variables'] as $name => $field) {
+      if (count($field) !== 0) {
+        $maxfields = 1;
+        $new_field = array();
+        
+        //get max(count(fields))
+        foreach($field as $name2 => $field2) {
+          if (is_array($field2) && array_key_exists('#value', $field2) && count($field2['#value']) > $maxfields) {
+            $maxfields = count($field2['#value']);
+          }
         }
+        
+        //If we have multipul values for any subfield, split out the field
+        if ($maxfields > 1) {
+          //initalize new fields
+          for($k = 0; $k < $maxfields; $k++) {
+            $new_field[$k] = array();
+          }
+          
+          //split each field
+          foreach($field as $name2 => $field2) {
+            if (is_array($field2)) {
+              if (is_array($field2['#value'])) {
+                foreach($field2['#value'] as $j => $value) {
+                  $temp = $field2;
+                  $temp['#value'] = $value;
+                  $new_field[$j][$name2] = $temp;
+                }
+              }
+              else {
+                $new_field[0][$name2] = $field2;
+              }
+            }
+          }
+          $new_variables[$name] = $new_field;
+        }
+        else {
+          $new_variables[$name] = $field;
+        }
+        $i++;
       }
     }
-    return $content;
-  }
-  
-  //Renders a table from parsed variable data
-  private static function dressTable($data) {
-    if ($data['#display']['label']) {
-      $caption = '<caption>'.$data['#display']['label'].'</caption>';
-    }
-    $content .= <<<EOH
-<table>
-  $caption
-  <thead>
-    <tr>
-EOH;
-    foreach ($data as $name => $variable) {
-      if (is_array($variable) && substr($name, 0, 1) != '#' && $variable['#display']['type'] == 'tablecell') {
-        $content .= '<th>'.$variable['#display']['label'].'</th>'."\n    ";
-      }
-    }
-$content .= <<<EOH
-</tr>
-  </thead>
-  <tbody>
-    <tr>
-EOH;
-    foreach ($data as $name => $variable) {
-      if (is_array($variable) && substr($name, 0, 1) != '#' && $variable['#display']['type'] == 'tablecell') {
-        $content .= '<td>'.$variable['#value'].'</td>'."\n    ";
-      }
-    }
-$content .= <<<EOH
-</tr>
-  </tbody>
-</table>
-EOH;
-    return $content;
+    $recipe['variables'] = $new_variables;
+    
+    unset($recipe['curlKeepAlive']);
+    unset($recipe['ingredients']);
+    unset($recipe['requires']);
+    $recipe['updated'] = date('c');
+    
+    
+    return ArrayToXML::toXML($recipe);
   }
   
   private function clean($variables, $final = false) {
     foreach ($variables as $name => $data) {
-      //Remove #value attributes if there are no #display attribute recursively
+      //Remove #value attributes if there are no label attribute recursively
       if (!is_array($data)) {
         continue;
       }
-      if (!array_key_exists('#display', $data)) {
+      if ($data['hidden']) {
         if (array_key_exists('#value', $data)) {
           if (count($data) > 1) {
             unset($variables[$name]['#value']);
@@ -202,11 +232,7 @@ EOH;
           }
         }
       }
-      if (array_key_exists('#display', $data)) {
-        if (array_key_exists('hidden', $data['#display'])) {
-          unset($variables[$name]['#value']);
-        }
-      }
+      unset($variables[$name]['hidden']);
       $variables[$name] = $this->clean($variables[$name]);
     }
     if ($final) {
@@ -217,12 +243,16 @@ EOH;
     }
   }
   
-  public function setVariable($name, $value) {
-     $this->variables[$name] = array('#value' => $value);
+  public function setRequiredVariable($name, $value) {
+     $this->variables[$name] = array('#value' => $value, 'hidden' => true);
   }
   
   public function getName() {
     return $this->name;
+  }
+  
+  public function getRequires() {
+    return $this->requires;
   }
 }
 
@@ -242,9 +272,18 @@ class Ingredient {
   protected $variables = array();
   protected $postFields = '';
   protected $curlHandler = null;
+  protected $debug = false;
+  protected $tidyOutput = false;
   
   function __construct($IngredientXML) {
     //set ingredient variables
+    
+    if (array_key_exists('debug', (array)$IngredientXML)) {
+      $this->debug = true;
+    }
+    if (array_key_exists('tidy', (array)$IngredientXML)) {
+      $this->tidyOutput = true;
+    }    
     $this->referrer = (string) $IngredientXML->referrer;
     if (is_numeric($this->referrer)) {
       $this->referrer = (integer) $this->referrer;
@@ -277,11 +316,19 @@ class Ingredient {
       }
     }
     
-    //Create Variables
-    foreach ($IngredientXML->variables as $variable) {
-      $this->variables[] = new Variable($variable->variable);
-    }
     
+    //Create Variables
+    //try and devise whether or not variables is an array
+    $temp = (array)$IngredientXML;
+    $temp = (array)$temp['variables'];
+    if ($temp['variable'] && array_key_exists(0, $temp['variable'])) {
+      foreach ($IngredientXML->variables->variable as $variable) {
+        $this->variables[] = new Variable($variable);
+      }
+    }
+    elseif ($temp['variable']) {
+      $this->variables[] = new Variable($IngredientXML->variables->variable);
+    }
   }
   
   public function get($curlOptions = array(), $curlHandler = null, $variables = array()) {
@@ -323,17 +370,39 @@ class Ingredient {
     }
     
     $result = curl_exec($curlHandler);
+    
+    if ($this->tidyOutput) {
+      $config = array(
+        'indent' => false,
+        'output-xhtml' => true,
+        'show-body-only' => true,
+        'wrap' => 0,
+        'clean' => true,
+      );
+      $tidy = new tidy;
+      $tidy->parseString($result, $config, 'utf8');
+      $tidy->cleanRepair();
+      $result = (string) $tidy;
+    }
+    
     $results = array();
     if ($result === false) {
       Consume::error('curl_exec failed (' . curl_errno($curlHandler) . ')', 'get', 'Ingredient', __LINE__);
     }
     else {
       foreach ($this->variables as $variable) {
-         $results = array_merge($results, $variable->process($result));
+        $results = array_merge($results, $variable->process($result));
+        if ($this->debug) {
+          print 'Ingredient variables:<pre>'.htmlentities(var_export($variable, true)).'</pre><hr/>';    
+        }
       }
       $this->curlHandler = $curlHandler;
     }
-    
+    if ($this->debug) {
+      print 'Ingredient settings:<pre>'.htmlentities(var_export($curlOptions, true)).'</pre><hr/>';    
+      print 'Ingredient result:<pre>'.htmlentities(var_export($result, true)).'</pre><hr/>';    
+      print 'Ingredient results:<pre>'.htmlentities(var_export($results, true)).'</pre><hr/>';    
+    }
     return $results;
   }
   
@@ -349,7 +418,8 @@ class Variable {
   protected $value = null;
   protected $pattern = '';
   protected $variables = array();
-  protected $display = array();
+  protected $label = "";
+  protected $hidden = boolean;
 
   
   function __construct($VariableXML) {
@@ -365,7 +435,7 @@ class Variable {
     
     if ($VariableXML->transformations){
       foreach ($VariableXML->transformations->transformation as $transformation) {
-        $this->transformations[(string) $transformation->search] = (string) $transformation->replace;
+        $this->transformations[html_entity_decode((string) $transformation->search)] = html_entity_decode((string) $transformation->replace);
       }
     }
     
@@ -375,8 +445,9 @@ class Variable {
       }
     }
     
-    if ($VariableXML->display){
-      $this->display = (array)$VariableXML->display;
+    $this->hidden = ($VariableXML->hidden)?1:0;
+    if ($VariableXML->label){
+       $this->label = (string)$VariableXML->label;
     }
   }
   
@@ -400,7 +471,7 @@ class Variable {
       $this->value[] = $newValue;
     }
     else if($this->value === null) {
-      $this->value = $newValue;
+    $this->value = $newValue;
     }
     else {
       $this->value = array($this->value, $newValue);
@@ -411,9 +482,11 @@ class Variable {
     $parsed_value = $this->parse($string);
     $attributes = array('#value' => $parsed_value);
     
-    if (count($this->display) > 0) {
-      $attributes['#display'] = $this->display;
+    if ($this->label) {
+      $attributes['label'] = $this->label;
     }
+    $attributes['hidden'] = $this->hidden;
+
     $value = array($this->name => $attributes);
     
     //recursively process each child-variable
@@ -421,7 +494,14 @@ class Variable {
     if (count($this->variables) > 0) {
       $values = array();
       foreach ($this->variables as $variable) {
-        $values = array_merge($values, $variable->process($parsed_value));
+        if (is_array($parsed_value)) {
+          foreach($parsed_value as $parsed_valuex) {
+            $values = array_merge($values, $variable->process($parsed_valuex));
+          }
+        }
+        else {
+          $values = array_merge($values, $variable->process($parsed_value));
+        }
       }
       
       $value[$this->name] = array_merge($value[$this->name], $values);
@@ -431,9 +511,10 @@ class Variable {
   
   protected function parse($string) {
     $matches = array();
+    //var_export($this->pattern);
     preg_match_all($this->pattern, $string, $matches, PREG_SET_ORDER);
     //This may need work
-    //print 'match:<pre>'.htmlentities($this->pattern).'</pre>:<pre>'.htmlentities(var_export($matches, true)).'</pre>:<pre>'.htmlentities(var_export($string, true)).'</pre>';
+    //print 'match:<pre>'.htmlentities($this->pattern).'</pre>:<pre>'.htmlentities(var_export($matches, true)).'</pre>';
     foreach ($matches as $value) {
       if (array_key_exists(1, $value)) {
         $this->setValue($value[1]);
@@ -450,3 +531,104 @@ class Variable {
     return $this->name;
   }  
 }
+
+
+/*
+  Class taken from http://snipplr.com/view/3491/convert-php-array-to-xml-or-simple-xml-object-if-you-wish/
+*/
+
+class ArrayToXML
+{
+    /**
+     * The main function for converting to an XML document.
+     * Pass in a multi dimensional array and this recrusively loops through and builds up an XML document.
+     *
+     * @param array $data
+     * @param string $rootNodeName - what you want the root node to be - defaultsto data.
+     * @param SimpleXMLElement $xml - should only be used recursively
+     * @return string XML
+     */
+    public static function toXML( $data, $rootNodeName = 'ResultSet', &$xml=null ) {
+      // turn off compatibility mode as simple xml throws a wobbly if you don't.
+      if ( ini_get('zend.ze1_compatibility_mode') == 1 ) ini_set ( 'zend.ze1_compatibility_mode', 0 );
+      if ( is_null( $xml ) ) $xml = new SimpleXMLElement('<consume></consume>');
+
+      // loop through the data passed in.
+      foreach( $data as $key => $value ) {
+
+          // no numeric keys in our xml please!
+          if ( is_numeric( $key ) ) {
+              $numeric = 1;
+              $key = $rootNodeName;
+          }
+
+          // delete any char not allowed in XML element names
+          $key = preg_replace('/[^a-z0-9\-\_\.\:]/i', '', $key);
+
+          if( is_object( $value ) ) {
+              $value = get_object_vars( $value );         
+          }
+
+          // if there is another array found recrusively call this function
+          if ( is_array( $value ) ) {
+              $node = ArrayToXML::is_assoc( $value ) || $numeric ? $xml->addChild( $key ) : $xml;
+
+              // recrusive call.
+              if ( $numeric ) $key = 'anon';
+              ArrayToXML::toXml( $value, $key, $node );
+          } else {
+
+              // add single node.
+              $value = htmlentities( $value );
+              $xml->addChild( $key, $value );
+          }
+      }
+
+      // pass back as XML
+      //return $xml->asXML();
+
+  // if you want the XML to be formatted, use the below instead to return the XML
+      $doc = new DOMDocument('1.0');
+      $doc->preserveWhiteSpace = false;
+      $doc->loadXML( $xml->asXML() );
+      $doc->formatOutput = true;
+      return $doc->saveXML();
+  }
+
+
+  /**
+   * Convert an XML document to a multi dimensional array
+   * Pass in an XML document (or SimpleXMLElement object) and this recrusively loops through and builds a representative array
+   *
+   * @param string $xml - XML document - can optionally be a SimpleXMLElement object
+   * @return array ARRAY
+   */
+  public static function toArray( $xml ) {
+      if ( is_string( $xml ) ) $xml = new SimpleXMLElement( $xml );
+      $children = $xml->children();
+      if ( !$children ) return (string) $xml;
+      $arr = array();
+      foreach ( $children as $key => $node ) {
+          $node = ArrayToXML::toArray( $node );
+
+          // support for 'anon' non-associative arrays
+          if ( $key == 'anon' ) $key = count( $arr );
+
+          // if the node is already set, put it into an array
+          if ( isset( $arr[$key] ) ) {
+              if ( !is_array( $arr[$key] ) || $arr[$key][0] == null ) $arr[$key] = array( $arr[$key] );
+              $arr[$key][] = $node;
+          } else {
+              $arr[$key] = $node;
+          }
+      }
+      return $arr;
+  }
+
+  // determine if a variable is an associative array
+  public static function is_assoc( $array ) {
+      return (is_array($array) && 0 !== count(array_diff_key($array, array_keys(array_keys($array)))));
+  }
+
+}
+

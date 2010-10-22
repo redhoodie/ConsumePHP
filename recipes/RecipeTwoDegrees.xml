@@ -1,0 +1,83 @@
+<?xml version='1.0' standalone='yes'?>
+<recipes>
+  <recipe>
+    <name>TwoDegrees</name>
+    <version>0.1</version>
+    <keepCurlAlive>1</keepCurlAlive>
+    <debug/>
+    <requires>
+      <variable>
+        <name>mobileNumber</name>
+        <type>number</type>
+      </variable>
+      <variable>
+        <name>password</name>
+        <type>password</type>
+      </variable>
+    </requires>
+    <ingredients>
+      <ingredient>
+        <url>https://secure.2degreesmobile.co.nz/web/ip/login</url>
+        <referrer>http://www.2degreesmobile.co.nz/web/guest/home</referrer>
+        <requestType>0</requestType>
+        <variables>
+          <variable>
+            <name>loginFormAction</name>
+            <pattern>|action="(.*?)"\Wname="loginFrm"|i</pattern>
+            <hidden/>
+          </variable>
+        </variables>
+      </ingredient>
+      <ingredient>
+        <url>@loginFormAction</url>
+        <referrer>1</referrer>
+        <requestType>1</requestType>
+        <postFields>p_p_id=IPLogin&amp;p_p_action=1&amp;p_p_state=normal&amp;p_p_mode=view&amp;p_p_col_id=column-2&amp;p_p_col_pos=1&amp;p_p_col_count=2&amp;_IPLogin_struts_action=%2Fext%2Flogin%2Fhome&amp;userid=@mobileNumber&amp;password=@password&amp;hdnAction=login&amp;hdnlocale=&amp;hdnAuthenticationType=M&amp;externalURLRedirect=</postFields>
+        <variables>
+          <variable>
+            <pattern>|&lt;strong&gt;Prepay\WCredit&lt;\/strong>.*?&lt;em>\(.*?\)&lt;\/em>\W&lt;\/td>\W&lt;td\Wclass="tableBillamount">(\d*\.\d*)|i</pattern>
+            <name>prepayCredit</name>
+            <label>Prepay Credit</label>
+            <transformations>
+              <transformation>
+                <search>|^|</search>
+                <replace>$</replace>
+              </transformation>  
+            </transformations>
+          </variable>
+          <variable>
+            <name>prepayCreditExpiring</name>
+            <pattern>|&lt;strong&gt;Prepay\WCredit&lt;/strong&gt;.*?&lt;em&gt;\(.*?on(.*?)\)|i</pattern>
+            <label>Prepay Credit Expiring</label>
+          </variable>
+          <variable>
+            <name>texts</name>
+            <pattern>|&lt;strong&gt;Texts&lt;/strong&gt;.*?&lt;em&gt;\(.*?\)&lt;/em&gt;\W*&lt;/td&gt;\W&lt;td\Wclass="tableBillamount"&gt;(\d*)|i</pattern>
+            <label>Texts</label>
+          </variable>
+          <variable>
+            <name>textsExpiring</name>
+            <pattern>|&lt;strong&gt;Texts&lt;/strong&gt;.*?&lt;em&gt;\(.*? msgs expiring on (.*?)\)&lt;/em&gt;\W*&lt;/td&gt;\W&lt;td\Wclass="tableBillamount"&gt;\d*|i</pattern>
+            <label>Texts Expiring</label>
+          </variable>
+          <variable>
+            <name>data</name>
+            <pattern>|&lt;strong&gt;National\WData&lt;/strong&gt;.*?&lt;td\Wclass="tableBillamount"&gt;(\d*\.\d*.*?\W.*?\W.*?)\W|i</pattern>
+            <label>Data</label>
+            <transformations>
+              <transformation>
+                <search>|&amp;nbsp;|</search>
+                <replace> </replace>
+              </transformation>                
+            </transformations>              
+          </variable>
+          <variable>
+            <name>dataExpiring</name>
+            <pattern>|&lt;strong&gt;National\WData&lt;/strong&gt;.*?&lt;em&gt;\(.*? expiring on (.*?)\)|i</pattern>
+            <label>Data Expiring</label>
+          </variable>
+        </variables>
+      </ingredient>
+    </ingredients>
+  </recipe>
+</recipes>
