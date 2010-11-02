@@ -66,9 +66,13 @@
             <label>Data</label>
             <transformations>
               <transformation>
-                <search>|&amp;nbsp;|</search>
+                <search>|nbsp|</search>
                 <replace> </replace>
-              </transformation>                
+              </transformation>
+              <transformation>
+                <search>|&amp; ;|</search>
+                <replace></replace>
+              </transformation>
             </transformations>              
           </variable>
           <variable>

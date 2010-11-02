@@ -47,6 +47,17 @@
                 </transformations>
                 <label>Value</label>
               </variable>
+              <variable>
+                <name>updated</name>
+                <pattern>|Balance last updated (.*)&lt;/div&gt;|msU</pattern>
+                <label>Last Updated</label>
+                <transformations>
+                  <transformation>
+                    <search>|&lt;.?.&gt;|</search>
+                    <replace></replace>
+                  </transformation>
+                </transformations>
+              </variable>
             </variables>
           </variable>
         </variables>

@@ -117,13 +117,12 @@ class Recipe {
     foreach ($recipeXML->ingredients->ingredient as $ingredient) {
       $this->ingredients[] = new Ingredient($ingredient);
     }
-    
-    if (count((array) $recipeXML->requires) > 0) {
-      $requires = (array) $recipeXML->requires;
+    $requires = (array) $recipeXML->requires;
+    if (count($requires) > 0) {
       foreach ($requires as $type => $array) {
         foreach ($array as $item) {
           $item = (array) $item;
-          if (!is_array($this->requires[$type])) {
+          if (!array_key_exists($type, $this->requires) || !is_array($this->requires[$type])) {
             $this->requires[$type] = array();
           }
           $this->requires[$type][] = $item;
@@ -263,9 +262,6 @@ define('CONSUME_INGREDIENT_REFERRER_NONE', 0);
 define('CONSUME_INGREDIENT_REFERRER_FOLLOW', 1);
 //define('CONSUME_INGREDIENT_REFERRER_URL', 'SomeUrl');
 
-define('CONSUME_INGREDIENT_TYPE_POST', 1);
-
-
 class Ingredient {
   protected $referrer = CONSUME_INGREDIENT_REFERRER_NONE;
   protected $curlOptions = array();
@@ -320,14 +316,18 @@ class Ingredient {
     //Create Variables
     //try and devise whether or not variables is an array
     $temp = (array)$IngredientXML;
-    $temp = (array)$temp['variables'];
-    if ($temp['variable'] && array_key_exists(0, $temp['variable'])) {
-      foreach ($IngredientXML->variables->variable as $variable) {
-        $this->variables[] = new Variable($variable);
+    if (array_key_exists('variables', $temp)) {
+      $temp = (array)$temp['variables'];
+      if ($temp['variable'] && array_key_exists(0, $temp['variable'])) {
+        foreach ($IngredientXML->variables->variable as $variable) {
+          $this->variables[] = new Variable($variable);
+        }
       }
-    }
-    elseif ($temp['variable']) {
-      $this->variables[] = new Variable($IngredientXML->variables->variable);
+      elseif ($temp['variable']) {
+        $data = $IngredientXML->variables->variable;
+        $temp = @new Variable($data);
+        $this->variables[] = $temp;
+      }
     }
   }
   
@@ -358,9 +358,9 @@ class Ingredient {
     }
     
     if (count($variables) > 0) {
-      foreach($variables as $postFieldVariableName => $postFieldVariable) {
-        $this->postFields = str_replace('@'.$postFieldVariableName, $postFieldVariable['#value'], $this->postFields);
-        $curlOptions[CURLOPT_URL] = str_replace('@'.$postFieldVariableName, $postFieldVariable['#value'], $curlOptions[CURLOPT_URL]);
+      foreach($variables as $postFieldName => $postFieldVariable) {
+        $this->postFields = str_replace('@'.$postFieldName, $postFieldVariable['#value'], $this->postFields);
+        $curlOptions[CURLOPT_URL] = str_replace('@'.$postFieldName, $postFieldVariable['#value'], $curlOptions[CURLOPT_URL]);
       }
       $curlOptions[CURLOPT_POSTFIELDS] = $this->postFields;
     }
@@ -449,6 +449,7 @@ class Variable {
     if ($VariableXML->label){
        $this->label = (string)$VariableXML->label;
     }
+    
   }
   
   protected function setValue($newValue) {
@@ -555,7 +556,7 @@ class ArrayToXML
 
       // loop through the data passed in.
       foreach( $data as $key => $value ) {
-
+          $numeric = 0;
           // no numeric keys in our xml please!
           if ( is_numeric( $key ) ) {
               $numeric = 1;

@@ -87,20 +87,7 @@
         <referrer>1</referrer>
         <requestType>1</requestType>
         <postFields>EWF_SYS_0=@EWF_SYS_0&amp;EWF_FORM_NAME=@EWF_FORM_NAME&amp;BANK+ID=@BANK_ID&amp;GROUP=@GROUP&amp;PRODUCT+NAME=@PRODUCT_NAME&amp;LANGUAGE+ID=@LANGUAGE_ID&amp;EWF_BUTTON_Modify=Modify&amp;LAST+HOST+RESPONSE=@LAST_HOST_RESPONSE&amp;USERID=@customerRegistrationNumber&amp;PIN=@password&amp;EXTRA2=@EXTRA2&amp;ServiceResolverURL=@ServiceResolverURL&amp;DefaultFormAction=@DefaultFormAction&amp;HiddenFrameTimeout=@HiddenFrameTimeout&amp;SRRUNNING=&amp;ANZ_FINACLE_GUID=@ANZ_FINACLE_GUID&amp;CorporateSignonCorpId=@customerRegistrationNumber&amp;CorporateSignonPassword=@password</postFields>
-        <variables>
-          <variable>
-            <name>securityFormAction</name>
-            <pattern>|&lt;FORM ACTION="(.*?)" METHOD="POST" NAME="securityForm"|i</pattern>
-            <hidden/>
-          </variable>
-        </variables>
-      </ingredient>
-      <ingredient>
-        <url>https://banking2.anz.com/IBNZ/@securityFormAction</url>
-        <referrer>1</referrer>
         <tidy/>
-        <requestType>1</requestType>
-        <postFields>Action.RetUser.SignonOK.x=69&amp;Action.RetUser.SignonOK.y=14&amp;Action.RetUser.SignonOK=Proceed+to+Internet+Banking</postFields>
         <variables>
           <variable>
             <name>headerFormAction</name>

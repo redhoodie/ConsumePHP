@@ -10,34 +10,42 @@
 
 <xsl:template match="/consume">
 <html>
-<h2 class="recipeName"><xsl:value-of select="name" /></h2>
-<h3 class="recipeVersion"><xsl:value-of select="version" /></h3>
-<h3 class="recipeUpdated"><xsl:value-of select="php:function('date', 'F j, Y, g:i a', php:function('strtotime',string(updated)))" /></h3>
-  <table border="1">
-    <thead>
-    <tr bgcolor="#9acd32">
-      <xsl:apply-templates select="variables/account/*[generate-id() = generate-id(key('accountdetails',label)[1])]"/>
-      <!--<xsl:for-each select="variables/account/*">
-      <xsl:if test="label != ''">
-      <th align="left"><xsl:value-of select="label" /></th>
-      </xsl:if>
-      </xsl:for-each>-->
-    </tr>
-    </thead>
-    <tbody>
-    <xsl:for-each select="variables/account">
-      <tr>
-      <xsl:for-each select="*">
-      <xsl:if test="label != ''">
-        <td>
-          <xsl:value-of select="value" />
-        </td>
-      </xsl:if>
-      </xsl:for-each>
-      </tr>
-    </xsl:for-each>
-    </tbody>
-  </table>
+  <head>
+  </head>
+  <body>
+    <div id="head">
+      <h2 class="recipeName"><xsl:value-of select="name" /></h2>
+      <h3 class="recipeVersion"><xsl:value-of select="version" /></h3>
+    </div>
+    <div id="content">
+      <h3 class="recipeUpdated"><xsl:value-of select="php:function('date', 'F j, Y, g:i a', php:function('strtotime',string(updated)))" /></h3>
+      <table border="1">
+        <thead>
+        <tr bgcolor="#9acd32">
+          <xsl:apply-templates select="variables/account/*[generate-id() = generate-id(key('accountdetails',label)[1])]"/>
+          <!--<xsl:for-each select="variables/account/*">
+          <xsl:if test="label != ''">
+          <th align="left"><xsl:value-of select="label" /></th>
+          </xsl:if>
+          </xsl:for-each>-->
+        </tr>
+        </thead>
+        <tbody>
+        <xsl:for-each select="variables/account">
+          <tr>
+          <xsl:for-each select="*">
+          <xsl:if test="label != ''">
+            <td>
+              <xsl:value-of select="value" />
+            </td>
+          </xsl:if>
+          </xsl:for-each>
+          </tr>
+        </xsl:for-each>
+        </tbody>
+      </table>
+    </div>
+  </body>
 </html>
 </xsl:template>
 
