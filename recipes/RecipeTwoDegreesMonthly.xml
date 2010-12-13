@@ -1,7 +1,7 @@
 <?xml version='1.0' standalone='yes'?>
 <recipes>
   <recipe>
-    <name>TwoDegrees</name>
+    <name>TwoDegrees Monthly</name>
     <version>0.1</version>
     <keepCurlAlive>1</keepCurlAlive>
     <debug/>
