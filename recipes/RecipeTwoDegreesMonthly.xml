@@ -35,9 +35,9 @@
         <postFields>p_p_id=IPLogin&amp;p_p_action=1&amp;p_p_state=normal&amp;p_p_mode=view&amp;p_p_col_id=column-2&amp;p_p_col_pos=1&amp;p_p_col_count=2&amp;_IPLogin_struts_action=%2Fext%2Flogin%2Fhome&amp;userid=@mobileNumber&amp;password=@password&amp;hdnAction=login&amp;hdnlocale=&amp;hdnAuthenticationType=M&amp;externalURLRedirect=</postFields>
         <variables>
           <variable>
-            <pattern>|&lt;strong&gt;Prepay\WCredit&lt;\/strong>.*?&lt;em>\(.*?\)&lt;\/em>\W&lt;\/td>\W&lt;td\Wclass="tableBillamount">(\d*\.\d*)|i</pattern>
-            <name>prepayCredit</name>
-            <label>Prepay Credit</label>
+            <pattern>|Your\Wbalance\Wowing&lt;/td>\W&lt;td\Wclass="tableBillamount">.(\d*\.\d*)|i</pattern>
+            <name>balanceOwing</name>
+            <label>Balance Owing</label>
             <transformations>
               <transformation>
                 <search>|^|</search>
@@ -46,19 +46,53 @@
             </transformations>
           </variable>
           <variable>
-            <name>prepayCreditExpiring</name>
-            <pattern>|&lt;strong&gt;Prepay\WCredit&lt;/strong&gt;.*?&lt;em&gt;\(.*?on(.*?)\)|i</pattern>
-            <label>Prepay Credit Expiring</label>
+            <name>prepaySpend</name>
+            <pattern>|&lt;strong&gt;Your\Wspend\Wsince\Wlast\Wbill&lt;/strong&gt;.*?&lt;td\Wclass="tableBillamount"&gt;(\d*\.\d*.*?\W.*?\W.*?)\W|i</pattern>
+            <label>Your spend since last bill</label>
+            <transformations>
+              <transformation>
+                <search>|nbsp|</search>
+                <replace> </replace>
+              </transformation>
+              <transformation>
+                <search>|&amp; ;|</search>
+                <replace></replace>
+              </transformation>
+              <transformation>
+                <search>|^|</search>
+                <replace>$</replace>
+              </transformation>  
+            </transformations>
           </variable>
           <variable>
             <name>texts</name>
-            <pattern>|&lt;strong&gt;Texts&lt;/strong&gt;.*?&lt;em&gt;\(.*?\)&lt;/em&gt;\W*&lt;/td&gt;\W&lt;td\Wclass="tableBillamount"&gt;(\d*)|i</pattern>
+            <pattern>|&lt;strong&gt;Texts&lt;/strong&gt;.*?&lt;td\Wclass="tableBillamount"&gt;(\d*)\W|i</pattern>
             <label>Texts</label>
           </variable>
           <variable>
             <name>textsExpiring</name>
-            <pattern>|&lt;strong&gt;Texts&lt;/strong&gt;.*?&lt;em&gt;\(.*? msgs expiring on (.*?)\)&lt;/em&gt;\W*&lt;/td&gt;\W&lt;td\Wclass="tableBillamount"&gt;\d*|i</pattern>
+            <pattern>|&lt;strong&gt;Texts&lt;/strong&gt;.*?&lt;em&gt;\(.*? msgs will expire on (.*?)\)|i</pattern>
             <label>Texts Expiring</label>
+          </variable>
+          <variable>
+            <name>minutes</name>
+            <pattern>|&lt;strong&gt;NZ\Wminutes&lt;/strong&gt;.*?&lt;td\Wclass="tableBillamount"&gt;(\d*)\W|i</pattern>
+            <label>Minutes</label>
+          </variable>
+          <variable>
+            <name>minutesExpiring</name>
+            <pattern>|&lt;strong&gt;NZ\Wminutes&lt;/strong&gt;.*?&lt;em&gt;\(.*? mins will expire on (.*?)\)|i</pattern>
+            <label>Minutes Expiring</label>
+          </variable>
+          <variable>
+            <name>bonusMinutes</name>
+            <pattern>|&lt;strong&gt;Bonus\Wminutes&lt;/strong&gt;.*?&lt;td\Wclass="tableBillamount"&gt;(\d*)\W|i</pattern>
+            <label>Bonus Minutes</label>
+          </variable>
+          <variable>
+            <name>bonusMinutesExpiring</name>
+            <pattern>|&lt;strong&gt;Bonus\Wminutes&lt;/strong&gt;.*?&lt;em&gt;\(.*? mins will expire on (.*?)\)|i</pattern>
+            <label>Bonus Minutes Expiring</label>
           </variable>
           <variable>
             <name>data</name>
@@ -77,7 +111,7 @@
           </variable>
           <variable>
             <name>dataExpiring</name>
-            <pattern>|&lt;strong&gt;National\WData&lt;/strong&gt;.*?&lt;em&gt;\(.*? expiring on (.*?)\)|i</pattern>
+            <pattern>|&lt;strong&gt;National\WData&lt;/strong&gt;.*?&lt;em&gt;\(.*? will expire on (.*?)\)|i</pattern>
             <label>Data Expiring</label>
           </variable>
         </variables>
