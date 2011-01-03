@@ -48,6 +48,7 @@
             <name>CurrentAndSavingsAccounts</name>
             <label>Current and Savings Accounts</label>
             <pattern>|caption&gt;Current and Savings Accounts.*?&lt;/caption&gt;(.*?)&lt;/table&gt;|ims</pattern>
+            <hidden />
             <variables>
               <variable>
                 <name>account</name>
@@ -82,6 +83,7 @@
             <name>CreditCards</name>
             <label>Credit Cards</label>
             <pattern>|caption&gt;Credit Cards.*?&lt;/caption&gt;(.*?)&lt;/table&gt;|ims</pattern>
+            <hidden />
             <variables>
               <variable>
                 <name>account</name>
@@ -126,6 +128,7 @@
             <name>CashPortfolioInvestmentEntities</name>
             <label>Cash Portfolio Investment Entities</label>
             <pattern>|caption&gt;Cash Portfolio Investment Entities.*?&lt;/caption&gt;(.*?)&lt;/table&gt;|ims</pattern>
+            <hidden />
             <variables>
               <variable>
                 <name>account</name>
@@ -155,11 +158,12 @@
             <name>Investments</name>
             <label>Investments</label>
             <pattern>|caption&gt;Investments.*?&lt;/caption&gt;(.*?)&lt;/table&gt;|ims</pattern>
-            <multiple />
+            <hidden />
             <variables>
               <variable>
                 <name>account</name>
                 <pattern>|&lt;th scope="row" colspan="(.*?)&lt;/tr&gt;|ims</pattern>
+                <multiple />
                 <variables>
                   <variable>
                     <name>AccountName</name>
