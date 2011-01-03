@@ -22,14 +22,14 @@ EN" indent="yes"/>
       <table border="1">
         <thead>
         <tr bgcolor="#9acd32">
-          <xsl:for-each select="variables/*">
+          <xsl:for-each select="variable">
           <th align="left"><xsl:value-of select="label" /></th>
           </xsl:for-each>
         </tr>
         </thead>
         <tbody>
         <tr>
-        <xsl:for-each select="variables/*">
+        <xsl:for-each select="variable">
           <td>
             <xsl:value-of select="value" />
           </td>

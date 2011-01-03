@@ -22,7 +22,7 @@ EN" indent="yes"/>
       <table border="1">
         <thead>
         <tr bgcolor="#9acd32">
-          <xsl:for-each select="variables/*/*">
+          <xsl:for-each select="variable/*">
             <xsl:if test="label != ''">
               <th align="left"><xsl:value-of select="label" /></th>
             </xsl:if>
@@ -31,7 +31,7 @@ EN" indent="yes"/>
         </thead>
         <tbody>
         <tr>
-        <xsl:for-each select="variables/*/*">
+        <xsl:for-each select="variable/*">
           <xsl:if test="label != ''">
             <td>
               <xsl:value-of select="value" />

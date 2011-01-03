@@ -56,6 +56,14 @@
                     <search>|&lt;.?.&gt;|</search>
                     <replace></replace>
                   </transformation>
+                  <transformation>
+                    <search>|[\n\t]|</search>
+                    <replace></replace>
+                  </transformation>
+                  <transformation>
+                    <search>|&#xD;|</search>
+                    <replace> </replace>
+                  </transformation>
                 </transformations>
               </variable>
             </variables>

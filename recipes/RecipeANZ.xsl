@@ -6,7 +6,7 @@
   doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd" 
   doctype-public="-//W3C//DTD XHTML 1.0 Transitional// EN" indent="yes"/>
 
-<xsl:key name="accountdetails" match="/consume/variables/account/*" use="label"/>
+<xsl:key name="accountdetails" match="/consume/variable/variable" use="label"/>
 
 <xsl:template match="/consume">
 <html>
@@ -22,16 +22,11 @@
       <table border="1">
         <thead>
         <tr bgcolor="#9acd32">
-          <xsl:apply-templates select="variables/account/*[generate-id() = generate-id(key('accountdetails',label)[1])]"/>
-          <!--<xsl:for-each select="variables/account/*">
-          <xsl:if test="label != ''">
-          <th align="left"><xsl:value-of select="label" /></th>
-          </xsl:if>
-          </xsl:for-each>-->
+          <xsl:apply-templates select="variable/*[generate-id() = generate-id(key('accountdetails',label)[1])]"/>
         </tr>
         </thead>
         <tbody>
-        <xsl:for-each select="variables/account">
+        <xsl:for-each select="variable">
           <tr>
           <xsl:for-each select="*">
           <xsl:if test="label != ''">

@@ -1,5 +1,4 @@
 <?php
-
   if (array_key_exists('recipeURL', $_POST)) {
     require_once('../consume.php');
     
@@ -18,6 +17,7 @@
       }
       $gotAllRequirements[$i] = $good;
     }
+    session_start();
   }
   //generate a list of available recipies
   $basePath = pathinfo($_SERVER['REQUEST_URI']);
@@ -43,12 +43,17 @@
   
   $optionsRecipies = '';
   foreach ($recipies as $name => $path) {
-    $optionsRecipies .= '<option value="'.$path.'">'.$name.'</option>';
+    if (array_key_exists('recipeURL', $_POST) && $_POST['recipeURL'] == $path) {
+      $optionsRecipies .= '<option value="'.$path.'" selected="selected">'.$name.'</option>';
+    }
+    else {
+      $optionsRecipies .= '<option value="'.$path.'">'.$name.'</option>';
+    }
   }
   
   $optionsStylesheets = '';
   foreach ($stylesheets as $name => $path) {
-    if ($name == 'generic.xsl') {
+    if (($name == 'generic.xsl' && !array_key_exists('stylesheetURL', $_POST)) || (array_key_exists('stylesheetURL', $_POST) && $_POST['stylesheetURL'] == $path)) {
       $selected = ' selected="selected"';
     }
     $optionsStylesheets .= '<option value="'.$path.'"'.$selected.'>'.$name.'</option>';;
@@ -75,6 +80,8 @@
       <select name="stylesheetURL">
         <?php print $optionsStylesheets ?>
       </select>
+      <input type="checkbox" name="cache" id="cache"<?php print (array_key_exists('cache', $_POST)?' checked="checked"':'');?>><label for="cache">Cache</label>
+      
       <input type="submit" value="Consume!" />
     </form>
   </header>
@@ -87,12 +94,25 @@
       <h2>Consuming <?php print $recipe->getName(); ?>...</h2>
       <?php
         $requires = $recipe->getRequires();
-        if (count($requires) > 0 && (!array_key_exists($i, $gotAllRequirements) || $gotAllRequirements[$i] == false)) {
+        $cache = null;
+        if (array_key_exists('cache', $_SESSION) && array_key_exists('cache', $_POST)) {
+          $cache = $_SESSION['cache'];
+        }
+        $validCache = (is_object($cache) && get_class($cache) == 'Recipe' && $cache->getName() == $recipe->getName());
+        
+        if (!$validCache && count($requires) > 0 && (!array_key_exists($i, $gotAllRequirements) || $gotAllRequirements[$i] == false)) {
           $recipeURL = $_POST['recipeURL'];
           $stylesheetURL = $_POST['stylesheetURL'];
+          if (array_key_exists('cache', $_POST)) {
+            $cache = '<input type="hidden" name="cache" id="cache" value="" />';
+          }
+          else {
+            $cache = '';
+          }
           print <<< EOF
       <p>Woah, This recipe needs some stuff:</p>
       <form action="" method="post">
+        $cache
         <input type="hidden" name="recipeURL" value="$recipeURL" />
         <input type="hidden" name="stylesheetURL" value="$stylesheetURL" />
 EOF;
@@ -107,12 +127,19 @@ EOF;
 EOF;
         }
         else {
-          foreach ($_POST as $name => $value) {
-            if (substr($name, 0, 5) == 'field') {
-              $recipe->setRequiredVariable(substr($name, 5), $value);
+          if ($validCache) {
+            $recipe = $cache;
+          } else {
+            foreach ($_POST as $name => $value) {
+              if (substr($name, 0, 5) == 'field') {
+                $recipe->setRequiredVariable(substr($name, 5), $value);
+              }
             }
+            $recipe->bake();
           }
-          $recipe->bake();
+          if (array_key_exists('cache', $_POST)) {
+            $_SESSION['cache'] = $recipe;
+          }
           $resultXML = $recipe->getResult();
           print '<pre>' . htmlentities(var_export($resultXML, true)). '</pre>';          
           if (array_key_exists('stylesheetURL', $_POST) && $_POST['stylesheetURL']) {

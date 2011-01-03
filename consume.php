@@ -27,6 +27,8 @@ class Consume {
     2.x
   */
   
+  //print __LINE__ . '<pre>'.htmlentities(var_export(, true)).'</pre>';
+  
   //Default settings
   public static $curlOptions = array(
     CURLOPT_COOKIEFILE => '/tmp/cookie',
@@ -36,6 +38,8 @@ class Consume {
     CURLOPT_SSL_VERIFYPEER => false,
     CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)',
   );
+  
+  public static $cache = false;
   
   //Variables
   
@@ -136,18 +140,20 @@ class Recipe {
     $curlHandler = null;
 
     foreach ($this->ingredients as $ingredient) {
-      $newVars = $ingredient->get($curlOptions, $curlHandler, $this->variables);
-      $this->variables = array_merge($this->variables, $newVars);
+      $ingredient->get($curlOptions, $curlHandler, $this->variables);
+      
+      $this->variables = array_merge($this->variables, $ingredient->variables);
       if ($this->curlKeepAlive) {
          $curlHandler = $ingredient->getCurlHandler();
       }
     }
+    //print __LINE__ . '-bake<pre>'.htmlentities(var_export($this->variables, true)).'</pre>';
     $this->clean($this->variables, true);
   }
   
-  public function getVariables() {
+  /*public function getVariables() {
     return $this->variables;
-  }
+  }*/
   
   //Genetates a marked up version of retrieved variables
   public function getResult() {
@@ -161,49 +167,15 @@ class Recipe {
     //needs cleaning up
     $new_variables = array();
     $i = 0;
-    foreach($recipe['variables'] as $name => $field) {
-      if (count($field) !== 0) {
-        $maxfields = 1;
-        $new_field = array();
-        
-        //get max(count(fields))
-        foreach($field as $name2 => $field2) {
-          if (is_array($field2) && array_key_exists('#value', $field2) && count($field2['#value']) > $maxfields) {
-            $maxfields = count($field2['#value']);
-          }
-        }
-        
-        //If we have multipul values for any subfield, split out the field
-        if ($maxfields > 1) {
-          //initalize new fields
-          for($k = 0; $k < $maxfields; $k++) {
-            $new_field[$k] = array();
-          }
-          
-          //split each field
-          foreach($field as $name2 => $field2) {
-            if (is_array($field2)) {
-              if (is_array($field2['#value'])) {
-                foreach($field2['#value'] as $j => $value) {
-                  $temp = $field2;
-                  $temp['#value'] = $value;
-                  $new_field[$j][$name2] = $temp;
-                }
-              }
-              else {
-                $new_field[0][$name2] = $field2;
-              }
-            }
-          }
-          $new_variables[$name] = $new_field;
-        }
-        else {
-          $new_variables[$name] = $field;
-        }
-        $i++;
-      }
+    
+    //print __LINE__ . '-getResult<pre>'.htmlentities(var_export($recipe['variables'], true)).'</pre>';    
+    $recipe['variable'] = $recipe['variables'];
+    unset($recipe['variables']);
+    
+    foreach($recipe['variable'] as $variable) {
+      $new_variables = array_merge($new_variables, $variable->renderArray());
     }
-    $recipe['variables'] = $new_variables;
+    $recipe['variable'] = $new_variables;
     
     unset($recipe['curlKeepAlive']);
     unset($recipe['ingredients']);
@@ -215,24 +187,9 @@ class Recipe {
   }
   
   private function clean($variables, $final = false) {
-    foreach ($variables as $name => $data) {
-      //Remove #value attributes if there are no label attribute recursively
-      if (!is_array($data)) {
-        continue;
-      }
-      if ($data['hidden']) {
-        if (array_key_exists('#value', $data)) {
-          if (count($data) > 1) {
-            unset($variables[$name]['#value']);
-          }
-          else {
-            unset($variables[$name]);
-            continue;
-          }
-        }
-      }
-      unset($variables[$name]['hidden']);
-      $variables[$name] = $this->clean($variables[$name]);
+    foreach ($variables as $i => $variable) {
+      $variable->clean();
+      $variables[$i] = $variable;
     }
     if ($final) {
       $this->variables = $variables;
@@ -243,7 +200,7 @@ class Recipe {
   }
   
   public function setRequiredVariable($name, $value) {
-     $this->variables[$name] = array('#value' => $value, 'hidden' => true);
+     $this->variables[] = new PreVariable($name, $value, 1);
   }
   
   public function getName() {
@@ -265,7 +222,7 @@ define('CONSUME_INGREDIENT_REFERRER_FOLLOW', 1);
 class Ingredient {
   protected $referrer = CONSUME_INGREDIENT_REFERRER_NONE;
   protected $curlOptions = array();
-  protected $variables = array();
+  public $variables = array();
   protected $postFields = '';
   protected $curlHandler = null;
   protected $debug = false;
@@ -358,9 +315,11 @@ class Ingredient {
     }
     
     if (count($variables) > 0) {
-      foreach($variables as $postFieldName => $postFieldVariable) {
-        $this->postFields = str_replace('@'.$postFieldName, $postFieldVariable['#value'], $this->postFields);
-        $curlOptions[CURLOPT_URL] = str_replace('@'.$postFieldName, $postFieldVariable['#value'], $curlOptions[CURLOPT_URL]);
+      foreach($variables as $i => $variable) {
+        $postFieldName = $variable->getName();
+        $postFieldValue = $variable->getValue();
+        $this->postFields = str_replace('@'.$postFieldName, $postFieldValue[0], $this->postFields);
+        $curlOptions[CURLOPT_URL] = str_replace('@'.$postFieldName, $postFieldValue[0], $curlOptions[CURLOPT_URL]);
       }
       $curlOptions[CURLOPT_POSTFIELDS] = $this->postFields;
     }
@@ -385,15 +344,14 @@ class Ingredient {
       $result = (string) $tidy;
     }
     
-    $results = array();
     if ($result === false) {
       Consume::error('curl_exec failed (' . curl_errno($curlHandler) . ')', 'get', 'Ingredient', __LINE__);
     }
     else {
       foreach ($this->variables as $variable) {
-        $results = array_merge($results, $variable->process($result));
+        $variable->process($result);
         if ($this->debug) {
-          print 'Ingredient variables:<pre>'.htmlentities(var_export($variable, true)).'</pre><hr/>';    
+          print 'Ingredient variable:<pre>'.htmlentities(var_export($variable, true)).'</pre><hr/>';    
         }
       }
       $this->curlHandler = $curlHandler;
@@ -401,9 +359,9 @@ class Ingredient {
     if ($this->debug) {
       print 'Ingredient settings:<pre>'.htmlentities(var_export($curlOptions, true)).'</pre><hr/>';    
       print 'Ingredient result:<pre>'.htmlentities(var_export($result, true)).'</pre><hr/>';    
-      print 'Ingredient results:<pre>'.htmlentities(var_export($results, true)).'</pre><hr/>';    
+      print 'Ingredient Variables:<pre>'.htmlentities(var_export($this->variables, true)).'</pre><hr/>';    
     }
-    return $results;
+    return $variables;
   }
   
   public function getCurlHandler() {
@@ -415,12 +373,12 @@ class Variable {
   protected $assertions = array();
   protected $transformations = array();
   protected $name = '';
-  protected $value = null;
+  protected $value = array();
   protected $pattern = '';
   protected $variables = array();
   protected $label = "";
-  protected $hidden = boolean;
-
+  protected $hidden = false;
+  protected $multiple = false;
   
   function __construct($VariableXML) {
     
@@ -446,6 +404,8 @@ class Variable {
     }
     
     $this->hidden = ($VariableXML->hidden)?1:0;
+    $this->multiple = ($VariableXML->multiple)?1:0;
+    
     if ($VariableXML->label){
        $this->label = (string)$VariableXML->label;
     }
@@ -472,15 +432,27 @@ class Variable {
       $this->value[] = $newValue;
     }
     else if($this->value === null) {
-    $this->value = $newValue;
+      $this->value = $newValue;
     }
     else {
       $this->value = array($this->value, $newValue);
     }
   }
   
+  public function getValue() {
+    return $this->value;
+  }
+
+  protected function getVariables() {
+    return $this->variables;
+  }
+  
+  /*
+   * Process the Variable, and all subvariables, calling parse() on variable
+   */
   public function process($string) {
-    $parsed_value = $this->parse($string);
+    $parsed_value = $this->parse($string); //sets object's $value field
+    /*
     $attributes = array('#value' => $parsed_value);
     
     if ($this->label) {
@@ -489,25 +461,32 @@ class Variable {
     $attributes['hidden'] = $this->hidden;
 
     $value = array($this->name => $attributes);
-    
+    */
     //recursively process each child-variable
     //This may need work too
     if (count($this->variables) > 0) {
       $values = array();
-      foreach ($this->variables as $variable) {
+      foreach ($this->variables as $i => $variable) {
         if (is_array($parsed_value)) {
           foreach($parsed_value as $parsed_valuex) {
-            $values = array_merge($values, $variable->process($parsed_valuex));
+            $variable->process($parsed_valuex);
+            $this->variables[$i] = $variable;
+            //$values = array_merge($values, $variable->process($parsed_valuex));
           }
         }
         else {
-          $values = array_merge($values, $variable->process($parsed_value));
+          $variable->process($parsed_value);
+          $this->variables[$i] = $variable;
+          //$values = array_merge($values, $variable->process($parsed_value));
         }
       }
-      
+      /*
       $value[$this->name] = array_merge($value[$this->name], $values);
+      */
     }
+    /*
     return $value;
+    */
   }
   
   protected function parse($string) {
@@ -524,6 +503,9 @@ class Variable {
         $this->setValue($value[0]);
       }
     }
+    if (count($matches) == 0) {
+      $this->setValue(null);
+    }
     //print 'match:<pre>'.htmlentities(var_export($this->value, true)).'</pre>';    
     return $this->value;
   }
@@ -531,6 +513,57 @@ class Variable {
   public function getName() {
     return $this->name;
   }  
+  
+  //Hide Value if this is a hidden variable, or if the label is blank
+  public function clean() {
+    if ($this->hidden || $this->label == '') {
+      foreach ($this->value as $i => $value) {
+        $this->value[$i] = null;
+      }
+    }
+    foreach ($this->variables as $i => $variable) {
+      $variable->clean();
+      $this->variables[$i] = $variable;
+    }
+  }
+  
+  public function renderArray($limitTo = null) {
+    $results = array();
+    if (($this->hidden || !$this->label) && count($this->variables) == 0) {
+      return array();
+    }
+    
+    foreach ($this->value as $i => $value) {
+      $variables = array();
+      foreach ($this->variables as $variable) {
+        if (count($this->value)) {
+          $variables = array_merge($variables, $variable->renderArray($i));
+        }
+        else {
+          $variables = array_merge($variables, $variable->renderArray());
+        }
+      }
+      $result = array(
+        'name' => $this->name,
+        'label' => $this->label,
+        'value' => $value,
+        'variable' => $variables,
+      );
+      if ($this->multiple || $i === $limitTo || $limitTo === null) {
+        $results[] = $result;
+      }
+    }
+    
+    return $results;
+  }
+}
+
+class PreVariable extends Variable {
+  function __construct($name, $value = null, $hidden = false) {
+    $this->name = $name;
+    $this->value = array($value);
+    $this->hidden = $hidden;
+  }
 }
 
 
